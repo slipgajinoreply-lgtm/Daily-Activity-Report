@@ -91,6 +91,9 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// PENTING: ganti URL di bawah ini dengan link Web App Apps Script kamu sendiri
+const API_URL = 'https://script.google.com/macros/s/AKfycbw6PvE6euCTRPKpIVmOFY9_wq_OxpS7A6zUtbqPyoH3ojr-kX6vjxxAt9Mxgwo7FGs_/exec';
+
 let CURRENT_USER = null;
 let state = { view:'jobs', job:null, reportId:null, reportData:null };
 const LS_KEY = 'dar_user_email';
@@ -129,10 +132,6 @@ function submitLogin(){
   tryLogin(email, false);
 }
 // ---------------- SERVER CALL HELPER (fetch ke Apps Script) ----------------
-// PENTING: ganti URL di bawah ini dengan link Web App Apps Script kamu sendiri
-// (Deploy > New deployment > Web app > copy URL yang diakhiri /exec)
-const API_URL = 'https://script.google.com/macros/s/AKfycbw6PvE6euCTRPKpIVmOFY9_wq_OxpS7A6zUtbqPyoH3ojr-kX6vjxxAt9Mxgwo7FGs_/exec';
-
 function callServer(action, payload){
   return fetch(API_URL, {
     method: 'POST',
