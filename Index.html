@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Daily Activity Report</title>
+<style>
+  :root{
+    --navy:#0b3d62; --blue:#1f6fa8; --sky:#3aa6d8; --ink:#1a2733;
+    --paper:#f4f7f9; --line:#d7e2e8; --amber:#e8932c; --ok:#2f8f5b; --card:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:'Segoe UI', system-ui, Roboto, Arial, sans-serif; background:var(--paper); color:var(--ink); -webkit-tap-highlight-color:transparent;}
+  .topbar{background:linear-gradient(120deg,var(--navy),var(--blue) 70%,var(--sky)); color:#fff; padding:16px 18px 14px; position:sticky; top:0; z-index:20; box-shadow:0 4px 14px rgba(11,61,98,.25);}
+  .topbar .brand{font-size:11px; letter-spacing:.12em; text-transform:uppercase; opacity:.85; font-weight:600;}
+  .topbar h1{margin:2px 0 0; font-size:18px; font-weight:700;}
+  .topbar .sub{font-size:12px; opacity:.85; margin-top:2px;}
+  .backbtn{background:rgba(255,255,255,.16); border:none; color:#fff; padding:7px 12px; border-radius:8px; font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-bottom:10px;}
+  main{padding:14px 14px 90px; max-width:680px; margin:0 auto;}
+  .loading{display:flex; align-items:center; justify-content:center; gap:10px; padding:60px 0; color:#5b6b75;}
+  .spinner{width:22px; height:22px; border:3px solid #d7e2e8; border-top-color:var(--blue); border-radius:50%; animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .fab{position:fixed; bottom:20px; right:20px; z-index:30; background:var(--amber); color:#fff; border:none; width:56px; height:56px; border-radius:50%; font-size:28px; line-height:56px; text-align:center; box-shadow:0 6px 18px rgba(232,147,44,.5);}
+  .empty{text-align:center; padding:60px 20px; color:#5b6b75;}
+  .empty .icon{font-size:42px; margin-bottom:10px;}
+  .empty h3{margin:0 0 6px; color:var(--navy);}
+
+  .listcard{background:var(--card); border-radius:14px; padding:14px 14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(20,40,60,.07); border:1px solid var(--line); display:flex; gap:12px; align-items:center;}
+  .listcard .ic{width:44px; height:44px; border-radius:10px; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;}
+  .listcard .info{flex:1; min-width:0;}
+  .listcard .info .t{font-weight:700; font-size:15px; color:var(--navy);}
+  .listcard .info .s{font-size:12.5px; color:#56697a; margin-top:1px;}
+  .badges{display:flex; gap:6px; margin-top:7px; flex-wrap:wrap;}
+  .badge{font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:20px;}
+  .badge.pagi{background:#fff2de; color:#a3650b;} .badge.sore{background:#e4f3ec; color:var(--ok);} .badge.off{background:#eee; color:#888;}
+
+  .section{background:var(--card); border-radius:14px; padding:14px 16px 16px; margin-bottom:12px; box-shadow:0 2px 8px rgba(20,40,60,.06); border:1px solid var(--line);}
+  .section h2{font-size:12.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--blue); margin:0 0 10px; font-weight:700; display:flex; align-items:center; gap:8px;}
+  .section h2::before{content:''; width:4px; height:14px; background:var(--amber); border-radius:2px; display:inline-block;}
+  label{display:block; font-size:12px; color:#5b6b75; margin:10px 0 4px; font-weight:600;}
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=date], input[type=number], textarea, select{width:100%; padding:10px 11px; border:1.4px solid var(--line); border-radius:9px; font-size:14.5px; font-family:inherit; background:#fbfdfe; color:var(--ink);}
+  input:focus, textarea:focus{outline:none; border-color:var(--blue); background:#fff;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .mp-row{display:grid; grid-template-columns:1fr 64px; gap:8px; margin-bottom:6px;}
+  .mp-label{font-size:13px; font-weight:600; color:var(--ink); padding:9px 0;}
+  table.timetab{width:100%; border-collapse:collapse; font-size:13px;}
+  table.timetab th{background:var(--navy); color:#fff; padding:7px 6px; font-size:11px; text-transform:uppercase;}
+  table.timetab td{padding:7px 6px; border-bottom:1px solid var(--line);}
+  .chk{width:24px; height:24px; accent-color:var(--ok); cursor:pointer;}
+  .timecol-pagi{background:#fff8ee;} .timecol-sore{background:#eef8f1;}
+  .periodtag{font-size:10px; font-weight:700; padding:1px 6px; border-radius:8px; margin-left:6px;}
+  .periodtag.pagi{background:#fff2de;color:#a3650b;} .periodtag.sore{background:#e4f3ec;color:var(--ok);}
+  .dyn-row{display:flex; gap:8px; margin-bottom:8px; align-items:flex-start;}
+  .dyn-row input{flex:1;}
+  .rmv{background:#fdeaea; color:#c44; border:none; border-radius:8px; width:36px; height:38px; font-size:18px; flex-shrink:0;}
+  .addrow{background:#eaf2f8; color:var(--blue); border:none; border-radius:9px; padding:9px 14px; font-size:13px; font-weight:700; width:100%; margin-top:2px;}
+  .saverbar{position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line); padding:10px 14px calc(10px + env(safe-area-inset-bottom)); display:flex; gap:10px; z-index:25; box-shadow:0 -4px 14px rgba(0,0,0,.06);}
+  .btn{flex:1; padding:13px; border-radius:11px; border:none; font-size:14px; font-weight:700;}
+  .btn.primary{background:var(--navy); color:#fff;} .btn.pdf{background:var(--amber); color:#fff;} .btn.secondary{background:#eaf2f8; color:var(--blue);}
+  .toast{position:fixed; top:14px; left:50%; transform:translateX(-50%); background:var(--ok); color:#fff; padding:9px 18px; border-radius:24px; font-size:13px; font-weight:600; z-index:50; opacity:0; transition:opacity .25s;}
+  .toast.show{opacity:1;} .toast.err{background:#c44;}
+  .hint{font-size:11.5px; color:#8b9aa5; margin-top:4px;}
+  .qtybox{width:64px;}
+  .pagedots{display:flex; justify-content:center; gap:6px; margin:4px 0 14px;}
+  .pagedots span{width:8px; height:8px; border-radius:50%; background:var(--line);}
+  .pagedots span.active{background:var(--blue);}
+
+  .photogrid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .phototile{background:#fbfdfe; border:1.4px solid var(--line); border-radius:10px; overflow:hidden; position:relative;}
+  .phototile img{width:100%; height:130px; object-fit:cover; display:block; background:#eee;}
+  .phototile .capwrap{padding:6px 8px;}
+  .phototile input{font-size:12px; padding:6px 8px; border-radius:7px;}
+  .phototile .del{position:absolute; top:6px; right:6px; background:rgba(0,0,0,.55); color:#fff; border:none; width:26px; height:26px; border-radius:50%; font-size:14px;}
+  .addphoto{border:2px dashed var(--line); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; height:130px; color:var(--blue); font-size:13px; font-weight:600; gap:4px; cursor:pointer; background:#f7fafc;}
+  .addphoto .plus{font-size:26px;}
+  .userbadge{font-size:11px; opacity:.85; margin-top:4px;}
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+  <div class="brand">PT Salim Indokarya Pratama</div>
+  <h1 id="topTitle">Daily Activity Report</h1>
+  <div class="sub" id="topSub">Memuat...</div>
+</div>
+
+<main id="app"><div class="loading"><div class="spinner"></div> Memuat...</div></main>
+<div class="toast" id="toast"></div>
+
+<script>
+let CURRENT_USER = null;
+let state = { view:'jobs', job:null, reportId:null, reportData:null };
+const LS_KEY = 'dar_user_email';
+
+function toast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(window._tt);
+  window._tt = setTimeout(()=>t.classList.remove('show'), 1400);
+}
+function escapeAttr(s){ return (s||'').toString().replace(/"/g,'&quot;'); }
+
+// ---------------- INIT / LOGIN ----------------
+const savedEmail = localStorage.getItem(LS_KEY);
+if(savedEmail){
+  tryLogin(savedEmail, true);
+} else {
+  renderLogin();
+}
+
+function renderLogin(errMsg){
+  document.getElementById('topSub').textContent = 'Masuk untuk melanjutkan';
+  document.getElementById('app').innerHTML = `
+    <div class="section" style="margin-top:30px;">
+      <h2>Masuk</h2>
+      <label>Email Gmail kamu (harus sudah didaftarkan admin)</label>
+      <input type="text" id="loginEmail" placeholder="nama@gmail.com" autocomplete="email">
+      ${errMsg ? `<div class="hint" style="color:#c44;margin-top:8px;">${errMsg}</div>` : ''}
+      <button class="btn primary" style="width:100%;margin-top:14px;" onclick="submitLogin()">Masuk</button>
+    </div>
+  `;
+}
+function submitLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  if(!email){ toast('Isi email dulu', true); return; }
+  tryLogin(email, false);
+}
+// ---------------- SERVER CALL HELPER (fetch ke Apps Script) ----------------
+// PENTING: ganti URL di bawah ini dengan link Web App Apps Script kamu sendiri
+// (Deploy > New deployment > Web app > copy URL yang diakhiri /exec)
+const API_URL = 'https://script.google.com/macros/s/AKfycbw6PvE6euCTRPKpIVmOFY9_wq_OxpS7A6zUtbqPyoH3ojr-kX6vjxxAt9Mxgwo7FGs_/exec';
+
+function callServer(action, payload){
+  return fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // hindari CORS preflight
+    body: JSON.stringify({ action, payload: payload || {} })
+  }).then(r=>r.json()).then(res=>{
+    if(!res.ok) throw new Error(res.error || 'Error tidak diketahui');
+    return res.data;
+  });
+}
+
+function tryLogin(email, silent){
+  if(!silent){
+    document.getElementById('app').innerHTML = '<div class="loading"><div class="spinner"></div> Memeriksa akses...</div>';
+  }
+  callServer('checkAccessByEmail', { email }).then(user=>{
+    if(!user.allowed){
+      localStorage.removeItem(LS_KEY);
+      renderLogin('Email belum terdaftar. Hubungi admin untuk ditambahkan.');
+      return;
+    }
+    CURRENT_USER = user;
+    localStorage.setItem(LS_KEY, user.email);
+    document.getElementById('topSub').innerHTML = 'Login sebagai: ' + (user.nama || user.email);
+    loadJobs();
+  }).catch(err=>{
+    document.getElementById('app').innerHTML = '<div class="empty"><div class="icon">⚠️</div><h3>Gagal memuat</h3><p>'+err.message+'</p></div>';
+  });
+}
+function logout(){
+  localStorage.removeItem(LS_KEY);
+  CURRENT_USER = null;
+  removeBars();
+  renderLogin();
+}
+
+// ---------------- JOBS VIEW ----------------
+function loadJobs(){
+  state.view='jobs';
+  document.getElementById('topTitle').textContent='Pilih Pekerjaan';
+  document.getElementById('app').innerHTML = '<div class="loading"><div class="spinner"></div> Memuat daftar pekerjaan...</div>';
+  removeBars();
+  callServer('getJobs', { email: CURRENT_USER.email }).then(renderJobs).catch(e=>toast(e.message,true));
+}
+function renderJobs(jobs){
+  const app = document.getElementById('app');
+  if(jobs.length===0){
+    app.innerHTML = '<div class="empty"><div class="icon">🛠️</div><h3>Belum ada pekerjaan</h3><p>Ketuk + untuk menambah pekerjaan baru</p></div>';
+  } else {
+    app.innerHTML = jobs.map(j=>`
+      <div class="listcard" onclick="openJob('${escapeAttr(j)}')">
+        <div class="ic">🛠️</div>
+        <div class="info"><div class="t">${j}</div><div class="s">Ketuk untuk lihat laporan</div></div>
+      </div>`).join('');
+  }
+  addFab(()=>{
+    const name = prompt('Nama pekerjaan baru:');
+    if(!name) return;
+    callServer('createJob', { email: CURRENT_USER.email, jobName: name })
+      .then(()=>{ toast('Pekerjaan ditambahkan'); loadJobs(); })
+      .catch(e=>toast(e.message,true));
+  });
+}
+function openJob(job){
+  state.job = job;
+  loadReports();
+}
+
+// ---------------- REPORTS LIST VIEW ----------------
+function loadReports(){
+  state.view='reports';
+  document.getElementById('topTitle').textContent = state.job;
+  document.getElementById('app').innerHTML = '<div class="loading"><div class="spinner"></div> Memuat laporan...</div>';
+  removeBars();
+  callServer('getReportsSummary', { email: CURRENT_USER.email, jobName: state.job }).then(renderReports).catch(e=>toast(e.message,true));
+}
+function renderReports(reports){
+  const app = document.getElementById('app');
+  let html = `<button class="backbtn" onclick="loadJobs()">← Daftar Pekerjaan</button>`;
+  if(reports.length===0){
+    html += '<div class="empty"><div class="icon">📋</div><h3>Belum ada laporan</h3><p>Ketuk + untuk membuat laporan baru</p></div>';
+  } else {
+    html += reports.map(r=>{
+      const badges = (r.filledPagi?'<span class="badge pagi">PAGI ✓</span>':'<span class="badge off">PAGI -</span>') +
+                     (r.filledSore?'<span class="badge sore">SORE ✓</span>':'<span class="badge off">SORE -</span>');
+      return `<div class="listcard" onclick="openReport('${escapeAttr(r.id)}')">
+        <div class="ic">📅</div>
+        <div class="info"><div class="t">${r.tanggal}</div><div class="s">${r.judul||'Tanpa judul'}</div><div class="badges">${badges}</div></div>
+      </div>`;
+    }).join('');
+  }
+  app.innerHTML = html;
+  addFab(()=>{
+    state.reportId = null;
+    state.reportData = blankReport();
+    state.formPage = 1;
+    renderForm();
+  });
+}
+
+function blankReport(){
+  return {
+    id: 'R_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
+    tanggal: new Date().toISOString().slice(0,10),
+    noBQ:'', po:'', judul:'', lokasi:'', picLokasi:'',
+    manpower:{ projectManager:'', siteManager:'', safetyman:'', actionTeamQty:'', foreman:'', welder:'', fitter:'', helper:'' },
+    time:{ T0800:false,T0900:false,T1000:false,T1100:false,T1200:false,T1300:false,T1400:false,T1500:false,T1600:false,T1700:false },
+    overtime:false, overtimeRemark:'',
+    material:[''], consumable:[''], activity:[''], problem:[''],
+    photosJSON:[],
+    filledPagi:false, filledSore:false
+  };
+}
+
+function openReport(id){
+  document.getElementById('app').innerHTML = '<div class="loading"><div class="spinner"></div> Memuat laporan...</div>';
+  callServer('getReport', { email: CURRENT_USER.email, jobName: state.job, id }).then(data=>{
+    if(!data){ toast('Laporan tidak ditemukan', true); loadReports(); return; }
+    if(!data.photosJSON) data.photosJSON = [];
+    state.reportId = id;
+    state.reportData = data;
+    state.formPage = 1;
+    renderForm();
+  }).catch(e=>toast(e.message,true));
+}
+
+// ---------------- FORM ----------------
+function save(showToast){
+  clearTimeout(window._saveTimer);
+  const data = state.reportData;
+  const job = state.job;
+  window._saveTimer = setTimeout(()=>{
+    callServer('saveReport', { email: CURRENT_USER.email, jobName: job, data }).then(res=>{
+      state.reportId = res.id;
+      data.id = res.id;
+      if(showToast) toast('Tersimpan ✓');
+    }).catch(e=>toast('Gagal simpan: '+e.message,true));
+  }, showToast ? 0 : 700);
+}
+function field(path, val){
+  const parts = path.split('.');
+  let obj = state.reportData;
+  for(let i=0;i<parts.length-1;i++) obj = obj[parts[i]];
+  obj[parts[parts.length-1]] = val;
+  save(false);
+}
+
+function renderForm(){
+  document.getElementById('topTitle').textContent = state.reportData.lokasi || state.job;
+  removeBars();
+  if(state.formPage===1) renderFormPage1(); else renderFormPage2();
+  addSaverBar();
+}
+
+function dynRows(items, fieldName){
+  return items.map((val,i)=>`
+    <div class="dyn-row">
+      <input type="text" value="${escapeAttr(val)}" placeholder="Keterangan..." oninput="dynEdit('${fieldName}',${i},this.value)">
+      <button class="rmv" onclick="dynRemove('${fieldName}',${i})">×</button>
+    </div>`).join('');
+}
+function dynEdit(f, i, v){ state.reportData[f][i] = v; save(false); }
+function dynRemove(f, i){ state.reportData[f].splice(i,1); if(state.reportData[f].length===0) state.reportData[f].push(''); save(false); renderForm(); }
+function dynAdd(f){ state.reportData[f].push(''); save(false); renderForm(); }
+
+function mpField(key, label){
+  const r = state.reportData;
+  return `<label>${label}</label>
+    <input type="text" placeholder="Nama ${label}" value="${escapeAttr(r.manpower[key])}" oninput="field('manpower.${key}', this.value)">`;
+}
+function timeRow(t, label, period){
+  const r = state.reportData;
+  return `<tr class="timecol-${period}">
+    <td>${label} <span class="periodtag ${period}">${period.toUpperCase()}</span></td>
+    <td style="text-align:center"><input type="checkbox" class="chk" ${r.time[t]?'checked':''} onchange="field('time.${t}', this.checked)"></td>
+  </tr>`;
+}
+
+function renderFormPage1(){
+  const r = state.reportData;
+  document.getElementById('app').innerHTML = `
+    <button class="backbtn" onclick="loadReports()">← Daftar Laporan</button>
+    <div class="pagedots"><span class="active"></span><span></span></div>
+
+    <div class="section"><h2>Identitas Laporan</h2>
+      <label>Tanggal</label>
+      <input type="date" value="${r.tanggal}" onchange="field('tanggal', this.value)">
+      <div class="row2">
+        <div><label>No. BQ</label><input type="text" value="${escapeAttr(r.noBQ)}" oninput="field('noBQ', this.value)"></div>
+        <div><label>PO</label><input type="text" value="${escapeAttr(r.po)}" oninput="field('po', this.value)"></div>
+      </div>
+      <label>Judul</label><input type="text" value="${escapeAttr(r.judul)}" oninput="field('judul', this.value)">
+      <label>Lokasi</label><input type="text" value="${escapeAttr(r.lokasi)}" oninput="field('lokasi', this.value)">
+      <label>PIC Lokasi</label><input type="text" value="${escapeAttr(r.picLokasi)}" oninput="field('picLokasi', this.value)">
+    </div>
+
+    <div class="section"><h2>Man Power</h2>
+      ${mpField('projectManager','Project Manager')}
+      ${mpField('siteManager','Site Manager')}
+      ${mpField('safetyman','Safetyman')}
+      <label>Action Team (Qty)</label>
+      <input type="number" class="qtybox" value="${escapeAttr(r.manpower.actionTeamQty)}" oninput="field('manpower.actionTeamQty', this.value)">
+      ${mpField('foreman','Foreman')}
+      ${mpField('welder','Welder')}
+      ${mpField('fitter','Fitter')}
+      ${mpField('helper','Helper')}
+    </div>
+
+    <div class="section"><h2>Jam Kehadiran &amp; Overtime</h2>
+      <table class="timetab">
+        <tr><th style="text-align:left">Jam</th><th>Hadir</th></tr>
+        ${timeRow('T0800','08.00','pagi')}${timeRow('T0900','09.00','pagi')}${timeRow('T1000','10.00','pagi')}${timeRow('T1100','11.00','pagi')}${timeRow('T1200','12.00','pagi')}
+        ${timeRow('T1300','13.00','sore')}${timeRow('T1400','14.00','sore')}${timeRow('T1500','15.00','sore')}${timeRow('T1600','16.00','sore')}${timeRow('T1700','17.00','sore')}
+      </table>
+      <label style="margin-top:14px;">Overtime</label>
+      <div class="mp-row" style="grid-template-columns:64px 1fr;">
+        <input type="checkbox" class="chk" ${r.overtime?'checked':''} onchange="field('overtime', this.checked)">
+        <input type="text" placeholder="Keterangan overtime..." value="${escapeAttr(r.overtimeRemark)}" oninput="field('overtimeRemark', this.value)">
+      </div>
+    </div>
+
+    <div class="section"><h2>Material</h2>${dynRows(r.material,'material')}<button class="addrow" onclick="dynAdd('material')">+ Tambah Material</button></div>
+    <div class="section"><h2>Consumable</h2>${dynRows(r.consumable,'consumable')}<button class="addrow" onclick="dynAdd('consumable')">+ Tambah Consumable</button></div>
+    <div class="section"><h2>Activity Report</h2>${dynRows(r.activity,'activity')}<button class="addrow" onclick="dynAdd('activity')">+ Tambah Baris</button></div>
+    <div class="section"><h2>Problem</h2>${dynRows(r.problem,'problem')}<button class="addrow" onclick="dynAdd('problem')">+ Tambah Baris</button></div>
+
+    <div class="section"><h2>Status Pengisian</h2>
+      <div class="mp-row" style="grid-template-columns:64px 1fr;">
+        <input type="checkbox" class="chk" ${r.filledPagi?'checked':''} onchange="field('filledPagi', this.checked)">
+        <div class="mp-label">Sesi Pagi sudah diisi</div>
+      </div>
+      <div class="mp-row" style="grid-template-columns:64px 1fr;">
+        <input type="checkbox" class="chk" ${r.filledSore?'checked':''} onchange="field('filledSore', this.checked)">
+        <div class="mp-label">Sesi Sore sudah diisi</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFormPage2(){
+  const r = state.reportData;
+  const photos = r.photosJSON || [];
+  document.getElementById('app').innerHTML = `
+    <button class="backbtn" onclick="state.formPage=1; renderForm();">← Kembali ke Form</button>
+    <div class="pagedots"><span></span><span class="active"></span></div>
+    <div class="section">
+      <h2>Foto Progress</h2>
+      <div class="hint">Foto pagi & sore digabung dalam 1 kumpulan ini. Setiap foto wajib diberi keterangan.</div>
+      <div class="photogrid" id="photogrid" style="margin-top:10px;">
+        ${photos.map((p,i)=>`
+          <div class="phototile">
+            <img src="https://drive.google.com/thumbnail?id=${p.fileId}&sz=w400" />
+            <button class="del" onclick="removePhoto(${i})">×</button>
+            <div class="capwrap"><input type="text" placeholder="Caption..." value="${escapeAttr(p.caption)}" oninput="editCaption(${i}, this.value)"></div>
+          </div>`).join('')}
+        <label class="addphoto">
+          <div class="plus">＋</div>
+          <div>Tambah Foto</div>
+          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(event)">
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function editCaption(i, val){
+  state.reportData.photosJSON[i].caption = val;
+  save(false);
+}
+function removePhoto(i){
+  const p = state.reportData.photosJSON[i];
+  state.reportData.photosJSON.splice(i,1);
+  save(false);
+  renderFormPage2();
+  if(p && p.fileId) callServer('deletePhoto', { email: CURRENT_USER.email, fileId: p.fileId });
+}
+
+function handlePhotoSelect(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  compressImage(file, 1280, 0.72).then(dataUrl=>{
+    toast('Mengupload foto...');
+    const filename = 'progress_' + Date.now() + '.jpg';
+    callServer('uploadPhoto', { email: CURRENT_USER.email, jobName: state.job, reportId: state.reportId, base64Data: dataUrl, filename, caption: '' })
+      .then(res=>{
+        state.reportData.photosJSON.push({ fileId: res.fileId, caption: '' });
+        save(true);
+        renderFormPage2();
+      }).catch(e=>toast('Gagal upload: '+e.message, true));
+  });
+}
+
+function compressImage(file, maxDim, quality){
+  return new Promise((resolve)=>{
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const img = new Image();
+      img.onload = function(){
+        let w = img.width, h = img.height;
+        if(w > h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ---------------- UI HELPERS ----------------
+function removeBars(){
+  document.querySelectorAll('.fab, .saverbar').forEach(el=>el.remove());
+}
+function addFab(onClick){
+  const fab = document.createElement('button');
+  fab.className='fab'; fab.textContent='+';
+  fab.onclick = onClick;
+  document.body.appendChild(fab);
+}
+function addSaverBar(){
+  document.querySelectorAll('.saverbar').forEach(b=>b.remove());
+  const bar = document.createElement('div');
+  bar.className='saverbar';
+  if(state.formPage===1){
+    bar.innerHTML = `
+      <button class="btn secondary" onclick="state.formPage=2; renderForm();">📷 Foto →</button>
+      <button class="btn primary" onclick="save(true); loadReports();">Selesai</button>
+      <button class="btn pdf" onclick="exportPDF()">⬇ PDF</button>
+    `;
+  } else {
+    bar.innerHTML = `
+      <button class="btn secondary" onclick="state.formPage=1; renderForm();">← Form</button>
+      <button class="btn primary" onclick="save(true); loadReports();">Selesai</button>
+      <button class="btn pdf" onclick="exportPDF()">⬇ PDF</button>
+    `;
+  }
+  document.body.appendChild(bar);
+}
+
+// ---------------- PDF EXPORT ----------------
+function fmtDateLong(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function loadJsPDF(){
+  return new Promise((resolve, reject)=>{
+    if(window.jspdf){ resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    const timer = setTimeout(()=>reject(new Error('Timeout memuat library PDF, cek koneksi internet')), 15000);
+    script.onload = ()=>{ clearTimeout(timer); resolve(); };
+    script.onerror = ()=>{ clearTimeout(timer); reject(new Error('Gagal memuat library PDF')); };
+    document.head.appendChild(script);
+  });
+}
+
+async function exportPDF(){
+  toast('Menyiapkan PDF...');
+  try{ await loadJsPDF(); }
+  catch(e){ toast(e.message, true); return; }
+  const r = state.reportData;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 36;
+  let y = 40;
+
+  doc.setFillColor(11,61,98); doc.rect(margin, y-14, 4, 30, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(11,61,98);
+  doc.text('PT. SALIM INDOKARYA PRATAMA', margin+12, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(90,100,110);
+  doc.text('General Contractor With Specialisation in Fabrication, Pipe And Isulation', margin+12, y+11);
+  doc.text('Ruko Halim, Jl. Kartini No.150-152 Blok A-09, Injen Barat, Sidomoro, Kebomas, Gresik Regency, East Java 61121', margin+12, y+21);
+  doc.text('Telp: +62 822 7377 9191   Email: salimindokarya@gmail.com   Web: https://salimindokarya.com/', margin+12, y+31);
+  y += 46;
+  doc.setDrawColor(11,61,98); doc.setLineWidth(1.2); doc.line(margin, y, pageW-margin, y); y += 22;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(20,30,40);
+  doc.text('DAILY ACTIVITY REPORT', pageW/2, y, {align:'center'});
+  const tw = doc.getTextWidth('DAILY ACTIVITY REPORT');
+  doc.setLineWidth(0.6); doc.line(pageW/2-tw/2-2, y+3, pageW/2+tw/2+2, y+3);
+  y += 24;
+
+  doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(30,40,50);
+  [['DATE', fmtDateLong(r.tanggal)],['No. BQ', r.noBQ],['PO', r.po],['Judul', r.judul],['Lokasi', r.lokasi],['PIC Lokasi', r.picLokasi]].forEach(([k,v])=>{
+    doc.setFont('helvetica','bold'); doc.text(k, margin, y);
+    doc.setFont('helvetica','normal'); doc.text(':', margin+78, y); doc.text(v||'-', margin+88, y);
+    y += 14;
+  });
+  y += 8;
+
+  const colW = (pageW - margin*2 - 16)/2;
+  const leftX = margin, rightX = margin+colW+16;
+  let yLeft = y, yRight = y;
+
+  doc.setFillColor(11,61,98); doc.rect(leftX, yLeft, colW, 16, 'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('MAN POWER', leftX+5, yLeft+11); yLeft += 16;
+  const mp = r.manpower;
+  [['Project Manager', mp.projectManager],['Site Manager', mp.siteManager],['Safetyman', mp.safetyman],
+   ['Action Team (Qty)', mp.actionTeamQty],['Foreman', mp.foreman],['Welder', mp.welder],['Fitter', mp.fitter],['Helper', mp.helper]
+  ].forEach(([k,v],i)=>{
+    if(i%2===0){ doc.setFillColor(245,248,250); doc.rect(leftX, yLeft, colW, 15, 'F'); }
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(30,40,50);
+    doc.text(k, leftX+5, yLeft+10.5); doc.text(':', leftX+72, yLeft+10.5); doc.text(String(v||'-'), leftX+78, yLeft+10.5);
+    doc.setDrawColor(215,226,232); doc.line(leftX, yLeft+15, leftX+colW, yLeft+15);
+    yLeft += 15;
+  });
+
+  doc.setFillColor(11,61,98); doc.rect(rightX, yRight, colW, 16, 'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('TIME', rightX+5, yRight+11); doc.text('HADIR', rightX+colW-48, yRight+11); yRight += 16;
+  const times = [['T0800','08.00'],['T0900','09.00'],['T1000','10.00'],['T1100','11.00'],['T1200','12.00'],['T1300','13.00'],['T1400','14.00'],['T1500','15.00'],['T1600','16.00'],['T1700','17.00']];
+  times.forEach(([key,label],i)=>{
+    if(i%2===0){ doc.setFillColor(245,248,250); doc.rect(rightX, yRight, colW, 15, 'F'); }
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(30,40,50);
+    doc.text(label, rightX+5, yRight+10.5);
+    doc.setDrawColor(120,130,140); doc.rect(rightX+colW-44, yRight+3.5, 9, 9);
+    if(r.time[key]){ doc.setFont('helvetica','bold'); doc.setTextColor(47,143,91); doc.text('✓', rightX+colW-43, yRight+10.5); }
+    doc.setDrawColor(215,226,232); doc.line(rightX, yRight+15, rightX+colW, yRight+15);
+    yRight += 15;
+  });
+  doc.setFillColor(255,247,232); doc.rect(rightX, yRight, colW, 15, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(163,101,11);
+  doc.text('Overtime', rightX+5, yRight+10.5);
+  doc.setFont('helvetica','normal'); doc.setTextColor(30,40,50);
+  doc.text(r.overtime ? ('Ya - '+(r.overtimeRemark||'-')) : 'Tidak', rightX+50, yRight+10.5);
+  yRight += 15;
+
+  y = Math.max(yLeft, yRight) + 14;
+
+  function checkBreak(yy, needed){ if(yy+needed > doc.internal.pageSize.getHeight()-60){ doc.addPage(); return 40; } return yy; }
+  function sectionTable(title, items, yStart){
+    let yy = yStart;
+    doc.setFillColor(11,61,98); doc.rect(margin, yy, pageW-margin*2, 16, 'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text(title.toUpperCase(), margin+5, yy+11); yy += 16;
+    const list = (items && items.filter(x=>x && x.trim())) || []; if(list.length===0) list.push('-');
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(30,40,50);
+    list.forEach((txt,i)=>{
+      const lines = doc.splitTextToSize(txt, pageW-margin*2-12);
+      const rowH = lines.length*12 + 6;
+      yy = checkBreak(yy, rowH);
+      if(i%2===0){ doc.setFillColor(245,248,250); doc.rect(margin, yy, pageW-margin*2, rowH, 'F'); }
+      doc.text(lines, margin+6, yy+11);
+      doc.setDrawColor(215,226,232); doc.line(margin, yy+rowH, pageW-margin, yy+rowH);
+      yy += rowH;
+    });
+    return yy + 12;
+  }
+
+  y = checkBreak(y, 60); y = sectionTable('Material', r.material, y);
+  y = checkBreak(y, 60); y = sectionTable('Consumable', r.consumable, y);
+  y = checkBreak(y, 60); y = sectionTable('Activity Report', r.activity, y);
+  y = checkBreak(y, 60); y = sectionTable('Problem', r.problem, y);
+
+  y = checkBreak(y, 90); y += 10;
+  doc.setFontSize(9.5); doc.setTextColor(30,40,50);
+  doc.text('Prepared By,', margin, y); doc.text('Acknowledge By,', pageW-margin-150, y);
+  y += 45;
+  doc.setDrawColor(60,60,60);
+  doc.line(margin, y, margin+110, y); doc.line(margin+130, y, margin+240, y); doc.line(pageW-margin-150, y, pageW-margin-30, y);
+  y += 10; doc.setFontSize(8.5);
+  doc.text('Project Manager', margin, y); doc.text('Foreman', margin+130, y); doc.text('PIC Area Plant', pageW-margin-150, y);
+
+  // ---- Halaman foto ----
+  const photos = r.photosJSON || [];
+  if(photos.length > 0){
+    doc.addPage();
+    let py = 40;
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(11,61,98);
+    doc.text('DOKUMENTASI FOTO PROGRESS', pageW/2, py, {align:'center'});
+    py += 20;
+    const photoW = (pageW - margin*2 - 14)/2;
+    const photoH = photoW * 0.7;
+    let col = 0;
+
+    for(let i=0;i<photos.length;i++){
+      const p = photos[i];
+      let base64;
+      try{ base64 = await getPhotoBase64Promise(p.fileId); }catch(e){ base64 = null; }
+      const x = margin + col*(photoW+14);
+      if(py + photoH + 28 > doc.internal.pageSize.getHeight() - 40){
+        doc.addPage(); py = 40; col = 0;
+      }
+      const xPos = margin + col*(photoW+14);
+      if(base64){
+        try{ doc.addImage(base64, 'JPEG', xPos, py, photoW, photoH); }
+        catch(e){ doc.setDrawColor(200,200,200); doc.rect(xPos, py, photoW, photoH); }
+      } else {
+        doc.setDrawColor(200,200,200); doc.rect(xPos, py, photoW, photoH);
+        doc.setFontSize(8); doc.text('Foto tidak dapat dimuat', xPos+8, py+photoH/2);
+      }
+      doc.setFontSize(8.5); doc.setTextColor(50,60,70);
+      const capLines = doc.splitTextToSize(p.caption || '(tanpa caption)', photoW);
+      doc.text(capLines, xPos, py+photoH+12);
+
+      col++;
+      if(col >= 2){ col = 0; py += photoH + 30; }
+    }
+  }
+
+  doc.save(`DAR_${(r.lokasi||state.job||'lokasi').replace(/\s+/g,'_')}_${r.tanggal}.pdf`);
+}
+
+function getPhotoBase64Promise(fileId){
+  return callServer('getPhotoBase64', { email: CURRENT_USER.email, fileId });
+}
+</script>
+</body>
+</html>
