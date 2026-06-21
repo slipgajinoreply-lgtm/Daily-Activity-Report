@@ -316,6 +316,29 @@ async function buildAndDownloadPdf_(report, info){
     return y + 11;
   }
 
+  // Helper khusus Material/Consumable: nama di kiri (dipotong kalau kepanjangan),
+  // qty+uom SELALU rata kanan (tidak akan tertimpa walau nama panjang)
+  function nameValueRightAlignBox(x, w, yStart, rows){
+    const rowH = 8.6;
+    const list = rows.length ? rows : [['-','-']];
+    const boxH = list.length * rowH + 4;
+    doc.setDrawColor(215,226,232); doc.rect(x, yStart, w, boxH);
+    const valueReserve = 56; // lebar area qty+uom di kanan
+    let ry = yStart + 7;
+    list.forEach(([name, value])=>{
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.8); setInk();
+      let nameText = String(name);
+      const maxNameW = w - valueReserve - 8;
+      let truncated = doc.splitTextToSize(nameText, maxNameW)[0] || nameText;
+      if(truncated !== nameText && truncated.length > 3){ truncated = truncated.slice(0, -2) + '..'; }
+      doc.text(truncated, x+4, ry);
+      doc.setFont('helvetica','normal');
+      doc.text(String(value||'-'), x+w-4, ry, {align:'right'});
+      ry += rowH;
+    });
+    return boxH;
+  }
+
   // Helper: kotak label:value, return tinggi yg dipakai
   function labelValueBox(x, w, yStart, rows, labelW){
     const rowH = 8.6;
@@ -407,8 +430,8 @@ async function buildAndDownloadPdf_(report, info){
   sectionBar(colX2, colW, 'Consumable');
   const matRows = (report.material||[]).filter(m=>m.name).map(m=>[m.name, (m.qty||'-') + ' ' + (m.uom||'')]);
   const consRows = (report.consumable||[]).filter(m=>m.name).map(m=>[m.name, (m.qty||'-') + ' ' + (m.uom||'')]);
-  const matBoxH = labelValueBox(margin, colW, yMat, matRows.length?matRows:[['-','-']], 56);
-  const consBoxH = labelValueBox(colX2, colW, yMat, consRows.length?consRows:[['-','-']], 56);
+  const matBoxH = nameValueRightAlignBox(margin, colW, yMat, matRows);
+  const consBoxH = nameValueRightAlignBox(colX2, colW, yMat, consRows);
   y = yMat + Math.max(matBoxH, consBoxH) + 8;
 
   // ---- Activity (dengan progress di kanan) ----
