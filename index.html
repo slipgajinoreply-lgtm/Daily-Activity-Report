@@ -77,6 +77,9 @@
   <div class="brand">PT Salim Indokarya Pratama</div>
   <h1 id="topTitle">Daily Activity Report</h1>
   <div class="sub" id="topSub">Memuat...</div>
+  <div id="homeLinkWrap" style="display:none; margin-top:6px;">
+    <a href="#" onclick="loadJobs(); return false;" style="color:#fff; opacity:.9; font-size:12px; font-weight:700; text-decoration:underline;">🏠 Daftar Pekerjaan</a>
+  </div>
 </div>
 <main id="app"><div class="loading"><div class="spinner"></div> Memuat...</div></main>
 <div class="toast" id="toast"></div>
@@ -97,6 +100,10 @@ function toast(msg, isErr){
   window._tt = setTimeout(()=>t.classList.remove('show'), 1400);
 }
 function escapeAttr(s){ return (s||'').toString().replace(/"/g,'&quot;'); }
+function setHomeLinkVisible(visible){
+  const el = document.getElementById('homeLinkWrap');
+  if(el) el.style.display = visible ? 'block' : 'none';
+}
 function removeBars(){ document.querySelectorAll('.fab, .saverbar').forEach(el=>el.remove()); }
 function addFab(onClick){
   const fab = document.createElement('button');
@@ -153,6 +160,7 @@ function tryLogin(email, silent){
 function loadJobs(){
   state.view='jobs';
   document.getElementById('topTitle').textContent='Pilih Pekerjaan';
+  setHomeLinkVisible(false);
   document.getElementById('app').innerHTML = '<div class="loading"><div class="spinner"></div> Memuat...</div>';
   removeBars();
   callServer('getJobs', { email: CURRENT_USER.email }).then(renderJobs).catch(e=>toast(e.message,true));
@@ -182,6 +190,7 @@ function openJob(job){
 function loadReports(){
   state.view='reports';
   document.getElementById('topTitle').textContent = state.job;
+  setHomeLinkVisible(true);
   document.getElementById('app').innerHTML = '<div class="loading"><div class="spinner"></div> Memuat laporan...</div>';
   removeBars();
   callServer('getReportsSummary', { email: CURRENT_USER.email, jobName: state.job }).then(renderReports).catch(e=>toast(e.message,true));
@@ -195,9 +204,13 @@ function renderReports(reports){
     html += '<div class="empty"><div class="icon">📋</div><h3>Belum ada laporan</h3><p>Ketuk + untuk membuat laporan baru</p></div>';
   } else {
     html += reports.map(r=>`
-      <div class="listcard" onclick="openReport('${escapeAttr(r.id)}')">
+      <div class="listcard" style="align-items:flex-start;">
         <div class="ic">${r.locked ? '🔒' : '📅'}</div>
-        <div class="info"><div class="t">${r.tanggal} ${r.locked ? '<span style=\'color:#c44;font-size:11px;font-weight:700;\'>TERKUNCI</span>' : ''}</div><div class="s">${r.activitySingkat}</div></div>
+        <div class="info" style="cursor:pointer;" onclick="openReport('${escapeAttr(r.id)}')">
+          <div class="t">${r.tanggal} ${r.locked ? '<span style=\'color:#c44;font-size:11px;font-weight:700;\'>TERKUNCI</span>' : ''}</div>
+          <div class="s">${r.activitySingkat}</div>
+        </div>
+        <button onclick="downloadPdf('${escapeAttr(r.id)}', this)" style="background:var(--amber); color:#fff; border:none; border-radius:8px; padding:8px 10px; font-size:11px; font-weight:700; flex-shrink:0;">⬇ PDF</button>
       </div>`).join('');
   }
   app.innerHTML = html;
@@ -216,6 +229,27 @@ function renderReports(reports){
     renderForm();
   });
 }
+function downloadPdf(id, btnEl){
+  const originalText = btnEl ? btnEl.textContent : '';
+  if(btnEl){ btnEl.textContent = '...'; btnEl.disabled = true; }
+  toast('Menyiapkan PDF...');
+  callServer('generatePdfForReport', { email: CURRENT_USER.email, jobName: state.job, id })
+    .then(res=>{
+      const link = document.createElement('a');
+      link.href = res.base64;
+      link.download = res.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast('PDF siap: ' + res.filename);
+      if(btnEl){ btnEl.textContent = originalText; btnEl.disabled = false; }
+    })
+    .catch(e=>{
+      toast('Gagal buat PDF: '+e.message, true);
+      if(btnEl){ btnEl.textContent = originalText; btnEl.disabled = false; }
+    });
+}
+
 function infoBoxHtml_(){
   const i = state.jobInfo || {};
   const rows = [
@@ -426,7 +460,7 @@ function renderFormPage2(){
           </div>`).join('')}
         <label class="addphoto">
           <div class="plus">＋</div><div>Tambah Foto</div>
-          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(event)">
+          <input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(event)">
         </label>
       </div>
     </div>`;
@@ -441,7 +475,8 @@ function removePhoto(i){
 function handlePhotoSelect(evt){
   const file = evt.target.files[0];
   if(!file) return;
-  compressImage(file, 1280, 0.72).then(dataUrl=>{
+  toast('Mengompres foto...');
+  compressImageAdaptive(file, 700*1024).then(dataUrl=>{
     toast('Mengupload foto...');
     callServer('uploadPhoto', { email: CURRENT_USER.email, jobName: state.job, reportId: state.reportId, base64Data: dataUrl, caption: '' })
       .then(res=>{
@@ -468,6 +503,21 @@ function compressImage(file, maxDim, quality){
     };
     reader.readAsDataURL(file);
   });
+}
+// Kompresi bertahap: turunkan dimensi & kualitas sampai ukuran base64 di bawah targetBytes,
+// supaya tidak memenuhi kuota Drive walau foto asli dari kamera HP sangat besar.
+async function compressImageAdaptive(file, targetBytes){
+  const attempts = [
+    {maxDim:1280, quality:0.72}, {maxDim:1000, quality:0.65}, {maxDim:800, quality:0.6},
+    {maxDim:640, quality:0.55}, {maxDim:480, quality:0.5}
+  ];
+  let result = null;
+  for(const a of attempts){
+    result = await compressImage(file, a.maxDim, a.quality);
+    const approxBytes = result.length * 0.75; // estimasi ukuran biner dari panjang base64
+    if(approxBytes <= targetBytes) break;
+  }
+  return result;
 }
 
 // ---------------- UI BARS ----------------
