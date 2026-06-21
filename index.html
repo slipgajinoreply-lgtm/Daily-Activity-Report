@@ -187,6 +187,7 @@ function loadReports(){
   callServer('getReportsSummary', { email: CURRENT_USER.email, jobName: state.job }).then(renderReports).catch(e=>toast(e.message,true));
 }
 function renderReports(reports){
+  state.reportsList = reports;
   const app = document.getElementById('app');
   let html = `<button class="backbtn" onclick="loadJobs()">← Daftar Pekerjaan</button>`;
   html += infoBoxHtml_();
@@ -195,15 +196,23 @@ function renderReports(reports){
   } else {
     html += reports.map(r=>`
       <div class="listcard" onclick="openReport('${escapeAttr(r.id)}')">
-        <div class="ic">📅</div>
-        <div class="info"><div class="t">${r.tanggal}</div><div class="s">${r.activitySingkat}</div></div>
+        <div class="ic">${r.locked ? '🔒' : '📅'}</div>
+        <div class="info"><div class="t">${r.tanggal} ${r.locked ? '<span style=\'color:#c44;font-size:11px;font-weight:700;\'>TERKUNCI</span>' : ''}</div><div class="s">${r.activitySingkat}</div></div>
       </div>`).join('');
   }
   app.innerHTML = html;
   addFab(()=>{
+    const todayStr = new Date().toISOString().slice(0,10);
+    const existing = (state.reportsList || []).find(r => r.tanggal === todayStr);
+    if(existing){
+      toast(existing.locked ? 'Laporan hari ini sudah ada & terkunci' : 'Laporan hari ini sudah ada, lanjutkan saja', existing.locked);
+      openReport(existing.id);
+      return;
+    }
     state.reportId = null;
     state.reportData = blankReport();
     state.formPage = 1;
+    state.locked = false;
     renderForm();
   });
 }
@@ -239,7 +248,8 @@ function openReport(id){
     if(!data.activity || data.activity.length===0) data.activity=[''];
     if(!data.problem || data.problem.length===0) data.problem=[''];
     if(!data.administrasi || data.administrasi.length===0) data.administrasi=[''];
-    state.reportId = id; state.reportData = data; state.formPage = 1;
+    state.reportId = id; state.reportData = data; state.formPage = 1; state.locked = !!data.locked;
+    if(data.locked) toast('Laporan ini terkunci, hanya bisa dilihat', true);
     renderForm();
   }).catch(e=>toast(e.message,true));
 }
@@ -253,7 +263,15 @@ function save(showToast){
     callServer('saveReport', { email: CURRENT_USER.email, jobName: job, data }).then(res=>{
       state.reportId = res.id; data.id = res.id;
       if(showToast) toast('Tersimpan ✓');
-    }).catch(e=>toast('Gagal simpan: '+e.message,true));
+    }).catch(e=>{
+      if(String(e.message).indexOf('DUPLICATE_DATE:') === 0){
+        const existingId = e.message.split(':')[1];
+        toast('Laporan tanggal ini sudah ada, membuka laporan tersebut...', true);
+        openReport(existingId);
+        return;
+      }
+      toast('Gagal simpan: '+e.message,true);
+    });
   }, showToast ? 0 : 800);
 }
 function field(path, val){
@@ -317,6 +335,15 @@ function renderForm(){
   document.getElementById('topTitle').textContent = state.job;
   removeBars();
   if(state.formPage===1) renderFormPage1(); else renderFormPage2();
+  if(state.locked){
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:#fdeaea;color:#c44;padding:10px 14px;border-radius:10px;font-weight:700;font-size:13px;margin-bottom:10px;text-align:center;';
+    banner.textContent = '🔒 Laporan ini sudah DIKUNCI oleh admin - hanya bisa dilihat, tidak bisa diedit.';
+    document.getElementById('app').prepend(banner);
+    document.querySelectorAll('#app input, #app select, #app textarea, #app .addrow, #app .delbtn, #app .del, #app .addphoto').forEach(el=>{
+      el.disabled = true; el.style.opacity = '0.6'; el.style.pointerEvents = 'none';
+    });
+  }
   addSaverBar();
 }
 
@@ -448,7 +475,9 @@ function addSaverBar(){
   document.querySelectorAll('.saverbar').forEach(b=>b.remove());
   const bar = document.createElement('div');
   bar.className='saverbar';
-  if(state.formPage===1){
+  if(state.locked){
+    bar.innerHTML = `<button class="btn primary" onclick="loadReports();">← Kembali ke Daftar</button>`;
+  } else if(state.formPage===1){
     bar.innerHTML = `
       <button class="btn secondary" onclick="state.formPage=2; renderForm();">📷 Foto →</button>
       <button class="btn primary" onclick="save(true); loadReports();">Selesai</button>`;
