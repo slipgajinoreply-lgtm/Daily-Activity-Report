@@ -448,7 +448,7 @@ async function buildAndDownloadPdf_(report, info){
   y = yProb + probH + 6;
 
   // ---- Administrasi ----
-  const yAdm = sectionBar(margin, contentW, 'Administrasi');
+  const yAdm = sectionBar(margin, contentW, 'Planning Kerja Selanjutnya');
   const admH = bulletBox(margin, contentW, yAdm, report.administrasi);
   y = yAdm + admH + 14;
 
@@ -656,7 +656,7 @@ function renderFormPage1(){
     <div class="section"><h2>Consumable</h2>${materialConsumableHtml_('consumable','Consumable')}</div>
     <div class="section"><h2>Activity</h2>${textListHtml_('activity','Activity','Activity')}</div>
     <div class="section"><h2>Problem</h2>${textListHtml_('problem','Problem','Problem')}</div>
-    <div class="section"><h2>Administrasi</h2>${textListHtml_('administrasi','Administrasi','Administrasi')}</div>
+    <div class="section"><h2>Planning Kerja Selanjutnya</h2>${textListHtml_('administrasi','Planning Kerja Selanjutnya','Planning Kerja Selanjutnya')}</div>
 
     <div class="section"><h2>Jam Kerja</h2>
       <table class="timetab">
